@@ -30,7 +30,7 @@ knitr::kable(
 ## -----------------------------------------------------------------------------
 #  location_71 <- get_hystreet_station_data(
 #    hystreetId = 71,
-#    query = list(from = "2018-12-01", to = "2018-12-31", resolution = "day"))
+#    query = list(from = "2018-12-01", to = "2019-01-01", resolution = "day"))
 
 ## -----------------------------------------------------------------------------
 #  location_71 <- get_hystreet_station_data(
@@ -59,10 +59,10 @@ ggplot(location_71$measurements, aes(x = timestamp, y = pedestrians_count, colou
 #      select(pedestrians_count, timestamp) %>%
 #    mutate(station = 74)
 #  
-#  data <- bind_rows(location_73, location_74)
+#  data_73_74 <- bind_rows(location_73, location_74)
 
 ## ----eval =TRUE---------------------------------------------------------------
-ggplot(data, aes(x = timestamp, y = pedestrians_count, fill = weekdays(timestamp))) +
+ggplot(data_73_74, aes(x = timestamp, y = pedestrians_count, fill = weekdays(timestamp))) +
   geom_bar(stat = "identity") +
   scale_x_datetime(labels = date_format("%d.%m.%Y")) +
   facet_wrap(~station, scales = "free_y") +
@@ -72,16 +72,16 @@ ggplot(data, aes(x = timestamp, y = pedestrians_count, fill = weekdays(timestamp
 ## ----message=FALSE, warning=FALSE---------------------------------------------
 #  hystreet_ids <- get_hystreet_locations()
 #  
-#  all_data <- lapply(hystreet_ids[,"id"], function(x){
+#  all_data <- lapply(hystreet_ids[,"id"], function(ID){
 #    temp <- get_hystreet_station_data(
-#      hystreetId = x)
+#      hystreetId = ID,
+#      query = list(from = "2019-01-01", to = today(), resolution = "day"))
 #  
-#  
-#      lifetime_count <- temp$statistics$lifetime_count
+#      lifetime_count <- temp$statistics$timerange_count
 #      days_counted <- as.numeric(temp$metadata$latest_measurement_at  - temp$metadata$earliest_measurement_at)
 #  
 #      return(data.frame(
-#        id = x,
+#        id = ID,
 #        station = paste0(temp$city, " (",temp$name,")"),
 #        ratio = lifetime_count/days_counted))
 #  
@@ -102,4 +102,37 @@ ggplot(ratio %>%
        y = "Pedestrians per day") + 
     theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 45, hjust = 1))
+
+## ----corona_effects_data------------------------------------------------------
+#  corona_data <- lapply(hystreet_ids[,"id"], function(ID){
+#  
+#      temp <- get_hystreet_station_data(
+#          hystreetId = ID,
+#          query = list(from = "2020-03-01", to = "2020-06-10", resolution = "day")
+#      )
+#  
+#      return(data.frame(
+#      name = temp$name,
+#      city = temp$city,
+#      timestamp = format(as.POSIXct(temp$measurements$timestamp), "%Y-%m-%d"),
+#      pedestrians_count = temp$measurements$pedestrians_count,
+#      legend = paste(temp$city, temp$name, sep = " - ")
+#    ))
+#  
+#  })
+#  
+#  corona_data_all <- bind_rows(data)
+
+## ----corona_effects_plot, eval = TRUE-----------------------------------------
+corona_data_all %>% 
+ggplot(aes(ymd(timestamp), pedestrians_count, colour = legend)) +
+geom_line(alpha = 0.2) +
+    scale_x_date(labels = date_format("%d.%m.%Y"),
+               breaks = date_breaks("7 days")
+     ) +
+  theme(legend.position = "none",
+        legend.title = element_text("Legende"),
+         axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Date",
+       y = "Persons/Day")
 
